@@ -1,55 +1,84 @@
-#include <stdio.h>
-#include <stdlib.h>
-#include <readline/readline.h>
+#include <stdio.h> 
+#include <stdlib.h> 
+#include <string.h>
 #include <readline/history.h>
-
+#include <readline/readline.h>
+#include "history.h"
 #include "token.h"
 #include "lexer.h"
 #include "parser.h"
 #include "expand.h"
+#include "builtin.h"
+#include "executor.h"
 
 int main(void)
 {
-    char *input;
+    // Display a welcome banner when the shell starts
+    printf("=====================================\n");
+    printf("      Shellforge \n");
+    printf(" A Unix Style Shell written in C\n");
+    printf("=====================================\n");
+
+ token_list_t tokens;
+ pipeline_t pipeline;
+ 
+ char *line;
 
     while (1)
     {
-        input = readline("shellforge> ");
-
-        if (input == NULL)
+        line = readline("shellforge$ ");
+        if (line == NULL)
         {
-            printf("\n");
+            printf("\nGoodbye!\n");
             break;
         }
-
-        if (input[0] == '\0')
+        if (strlen(line) == 0)
         {
-            free(input);
+            free(line);
             continue;
         }
 
-        add_history(input);
+       if (strcmp(line, "history") == 0)
+       {
+          print_history();
+          free(line);
+           continue;
+       }
+// milestone 1 - enabling history
 
-        token_list_t tokens;
+        add_history(line);
 
-        lexer(input, &tokens);
+// milestone 2.1 - tokenization and lexer
 
-        token_print(&tokens);
+	lexer(line, &tokens);
 
-        pipeline_t pipeline;
+        // token_print(&tokens);
 
-        if (!parser(&tokens, &pipeline))
-        {
-            free(input);
-            continue;
+// milestone 2.2 - expansion of environment variables and parser
+
+	if(parser(&tokens, &pipeline))
+	{
+		expand_variables(&pipeline);
+    	//	pipeline_print(&pipeline);
+	}
+
+
+	for (int i = 0; i < pipeline.command_count; i++)
+	{
+    		int result =
+        	execute_command(&pipeline.commands[i]);
+
+        	if (result == 1)
+    	        {
+        	 free(line);
+		  return 0;
+                  
+        	}
+
         }
 
-        expand_variables(&pipeline);
+       free(line);
 
-        pipeline_print(&pipeline);
-
-        free(input);
     }
-
     return 0;
 }
